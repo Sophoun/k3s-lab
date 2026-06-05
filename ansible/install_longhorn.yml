@@ -1,0 +1,33 @@
+---
+- name: Install Longhorn Dependencies and Deploy
+  hosts: all
+  become: true
+  tasks:
+    - name: Install open-iscsi and nfs-common
+      apt:
+        name:
+          - open-iscsi
+          - nfs-common
+        state: present
+        update_cache: yes
+
+    - name: Ensure iscsid is enabled and running
+      systemd:
+        name: iscsid
+        enabled: yes
+        state: started
+
+- name: Deploy Longhorn
+  hosts: vm-1
+  become: true
+  tasks:
+    - name: Download Longhorn manifest
+      get_url:
+        url: https://raw.githubusercontent.com/longhorn/longhorn/v1.7.2/deploy/longhorn.yaml
+        dest: /tmp/longhorn.yaml
+
+    - name: Apply Longhorn manifest
+      shell: k3s kubectl apply -f /tmp/longhorn.yaml
+
+    - name: Wait for Longhorn manager to be ready
+      shell: k3s kubectl wait --namespace longhorn-system --for=condition=ready pod --selector=app=longhorn-manager --timeout=300s

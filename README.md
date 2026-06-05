@@ -45,27 +45,44 @@ Secure the cluster nodes by opening only the required ports:
 ansible-playbook -i ansible/hosts.ini ansible/configure_firewall.yml
 ```
 
-**What this does:**
+## 5. Install Infrastructure Components
 
-- Allows SSH.
-- Allows full communication between all cluster nodes.
-- Opens port 6443 (API Server) on master nodes.
-- Opens ports 80/443 for Ingress on all nodes.
-- Denies all other incoming traffic.
+### LoadBalancer (MetalLB)
 
-## 5. Cluster Management
-
-### Using kubectl on Master Nodes
-
-You can run `kubectl` directly on any master node (`vm-1`, `vm-2`, or `vm-3`):
+Provides external IP addresses for your services:
 
 ```sh
-# Example on vm-1
-ssh ubuntu@192.168.252.26
-sudo kubectl get nodes
+ansible-playbook -i ansible/hosts.ini ansible/install_metallb.yml
 ```
 
-### Accessing the Cluster Locally
+### Distributed Storage (Longhorn)
+
+Provides replicated, high-availability storage across nodes:
+
+```sh
+ansible-playbook -i ansible/hosts.ini ansible/install_longhorn.yml
+```
+
+### GitOps (ArgoCD)
+
+Automated application deployment:
+
+```sh
+ansible-playbook -i ansible/hosts.ini ansible/install_argocd.yml
+```
+
+---
+
+## 6. Accessing Services
+
+### ArgoCD UI
+
+- **URL**: [https://192.168.252.101](https://192.168.252.101)
+- **Username**: `admin`
+- **Password**: `hO7yjZ8IwwtJbblo`
+*(Note: Proceed past the SSL certificate warning in your browser)*
+
+### Local kubectl Management
 
 To manage the cluster from your host machine:
 
@@ -98,4 +115,8 @@ To manage the cluster from your host machine:
 - `multipass/`: Scripts and cloud-init for VM provisioning.
 - `ansible/`:
   - `hosts.ini`: Inventory grouped by master and node roles.
-  - `install_k3s.yml`: Playbook for HA installation and agent joining.
+  - `install_k3s.yml`: Playbook for HA installation.
+  - `configure_firewall.yml`: UFW security configuration.
+  - `install_metallb.yml`: LoadBalancer setup.
+  - `install_longhorn.yml`: HA storage setup.
+  - `install_argocd.yml`: GitOps setup.
