@@ -61,6 +61,7 @@ Provides replicated, high-availability storage across nodes:
 
 ```sh
 ansible-playbook -i ansible/hosts.ini ansible/install_longhorn.yml
+ansible-playbook -i ansible/hosts.ini ansible/expose_longhorn_ui.yml
 ```
 
 ### GitOps (ArgoCD)
@@ -81,6 +82,11 @@ ansible-playbook -i ansible/hosts.ini ansible/install_argocd.yml
 - **Username**: `admin`
 - **Password**: `hO7yjZ8IwwtJbblo`
 *(Note: Proceed past the SSL certificate warning in your browser)*
+
+### Longhorn UI
+
+- **URL**: [http://192.168.252.102](http://192.168.252.102)
+- **Status**: No password required by default.
 
 ### Local kubectl Management
 
@@ -119,4 +125,5 @@ To manage the cluster from your host machine:
   - `configure_firewall.yml`: UFW security configuration.
   - `install_metallb.yml`: LoadBalancer setup.
   - `install_longhorn.yml`: HA storage setup.
+  - `expose_longhorn_ui.yml`: Expose Longhorn UI via LoadBalancer.
   - `install_argocd.yml`: GitOps setup.
