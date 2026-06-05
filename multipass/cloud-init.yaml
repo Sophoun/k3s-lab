@@ -1,0 +1,11 @@
+#cloud-config
+users:
+  - name: ubuntu
+    gecos: Ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo, users
+    shell: /bin/bash
+    lock_passwd: false
+    passwd: "$6$Ywzx/k7H3mdcqjvu$9.grQS5cpeplOwHMEf2Fbx2nrO7cbPuNYBRREpaT8n3j3Ql3/SapUKKCjUqA/1xfKrh.BoQaIztfCUMrvdYWf."
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGcFzVf+My2JiQWGD8pM0gBr6ZCyInEiLTARPdF6V5+m nheumsophoun@CMCBs-MacBook-Pro.local

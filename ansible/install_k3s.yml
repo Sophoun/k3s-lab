@@ -1,0 +1,45 @@
+---
+- name: Install K3s on Masters
+  hosts: master
+  become: true
+  tasks:
+    - name: Install K3s on the first master
+      shell: |
+        curl -sfL https://get.k3s.io | sh -s - server --cluster-init
+      when: inventory_hostname == "vm-1"
+      args:
+        creates: /etc/rancher/k3s/k3s.yaml
+
+    - name: Get node token from first master
+      shell: cat /var/lib/rancher/k3s/server/node-token
+      register: node_token_reg
+      when: inventory_hostname == "vm-1"
+
+    - name: Set node token as fact
+      set_fact:
+        node_token: "{{ node_token_reg.stdout }}"
+      when: inventory_hostname == "vm-1"
+
+    - name: Share node token with other hosts
+      set_fact:
+        node_token: "{{ hostvars['vm-1']['node_token'] }}"
+      when: inventory_hostname != "vm-1"
+
+    - name: Install K3s on remaining masters
+      shell: |
+        curl -sfL https://get.k3s.io | K3S_TOKEN="{{ node_token }}" sh -s - server --server https://{{ hostvars['vm-1']['ansible_host'] }}:6443
+      when: inventory_hostname != "vm-1"
+      args:
+        creates: /etc/rancher/k3s/k3s.yaml
+
+- name: Install K3s on Agents
+  hosts: node
+  become: true
+  vars:
+    node_token: "{{ hostvars['vm-1']['node_token'] }}"
+  tasks:
+    - name: Install K3s on agents
+      shell: |
+        curl -sfL https://get.k3s.io | K3S_URL=https://{{ hostvars['vm-1']['ansible_host'] }}:6443 K3S_TOKEN="{{ node_token }}" sh -s -
+      args:
+        creates: /etc/rancher/k3s/k3s.yaml

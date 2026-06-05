@@ -1,0 +1,43 @@
+---
+- name: Configure Firewall for K3s Cluster
+  hosts: all
+  become: true
+  tasks:
+    - name: Allow SSH
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Allow all traffic from cluster nodes
+      ufw:
+        rule: allow
+        from_ip: "{{ hostvars[item]['ansible_host'] }}"
+      loop: "{{ groups['all'] }}"
+
+    - name: Allow K3s API Server (TCP 6443)
+      ufw:
+        rule: allow
+        port: '6443'
+        proto: tcp
+      when: "'master' in group_names"
+
+    - name: Allow HTTP/HTTPS for Ingress
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - '80'
+        - '443'
+
+    - name: Set default UFW policies
+      ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: 'incoming', policy: 'deny' }
+        - { direction: 'outgoing', policy: 'allow' }
+
+    - name: Enable UFW
+      ufw:
+        state: enabled
