@@ -27,6 +27,7 @@ The lab provisions a 3-node cluster (scalable to 5+) where nodes take on mixed r
 - **Multipass:** `brew install --cask multipass`
 - **Ansible:** `brew install ansible`
 - **Kubectl:** `brew install kubectl`
+- **Node.js:** For running the load test script
 
 ---
 
@@ -59,7 +60,36 @@ ansible-playbook -i ansible/hosts.ini ansible/expose_longhorn_ui.yml
 ansible-playbook -i ansible/hosts.ini ansible/install_cert_manager.yml
 ansible-playbook -i ansible/hosts.ini ansible/install_argocd.yml
 ansible-playbook -i ansible/hosts.ini ansible/install_monitoring.yml
+
+# Sample Application
+ansible-playbook -i ansible/hosts.ini ansible/deploy_sample_app.yml
 ```
+
+---
+
+## 🧪 Testing & Load Balancing
+
+### Sample API
+A lightweight Python API is deployed to the `sample-app` namespace. It includes two endpoints:
+- `/` (Default): Returns basic pod and node info.
+- `/work`: Simulates a CPU-intensive task (100ms busy wait).
+
+### High-Frequency Load Test
+Run a concurrent load test using the provided **TypeScript** script. To truly "stress" the cluster, use the `/work` endpoint:
+
+```bash
+# 1. Normal Load (Low CPU)
+npx tsx scripts/load-test.ts http://192.168.252.104 500 20
+
+# 2. Stress Test (High CPU)
+# Hits the /work endpoint with 1000 requests and 50 concurrency
+npx tsx scripts/load-test.ts http://192.168.252.104/work 1000 50
+```
+
+### 📈 Monitoring the Stress
+While the stress test is running, observe the impact:
+- **CLI:** `kubectl top nodes` or `kubectl top pods -n sample-app`
+- **Grafana:** [http://192.168.252.103](http://192.168.252.103) (Search for "Kubernetes / Compute Resources / Pod")
 
 ---
 
@@ -85,6 +115,7 @@ To manage the cluster from your host machine:
 | **ArgoCD** | [https://192.168.252.102](https://192.168.252.102) | `admin` / `HLHHhZIfWenv5j3s` |
 | **Longhorn** | [http://192.168.252.101](http://192.168.252.101) | *No Password* |
 | **Grafana** | [http://192.168.252.103](http://192.168.252.103) | `admin` / `nBNKJI4c8umwUennBGfl6rPb9c7zVigkrHJYvc0Y` |
+| **Sample API** | [http://192.168.252.104](http://192.168.252.104) | *No Password* |
 
 ---
 
@@ -94,8 +125,10 @@ To manage the cluster from your host machine:
 ├── ansible/
 │   ├── hosts.ini                # Inventory & variables
 │   ├── install_k3s.yml          # Core cluster setup
-│   ├── install_monitoring.yml   # Prometheus/Grafana stack
+│   ├── deploy_sample_app.yml    # API deployment
 │   └── ...                      # Infrastructure playbooks
+├── scripts/
+│   └── load-test.ts             # TypeScript load testing script
 └── multipass/
     ├── launch-vms.sh            # VM provisioning script
     └── cloud-init.yaml          # Node initialization config

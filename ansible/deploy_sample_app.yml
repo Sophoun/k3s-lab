@@ -1,0 +1,110 @@
+---
+- name: Deploy Sample API App
+  hosts: vm-1
+  become: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  tasks:
+    - name: Create sample-app namespace
+      shell: kubectl create namespace sample-app
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+
+    - name: Create ConfigMap with API Code
+      shell: |
+        kubectl create configmap api-code -n sample-app --from-literal=main.py='
+        import http.server
+        import json
+        import os
+        import time
+
+        class MyHandler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/work":
+                    # Simulate CPU intensive work
+                    start = time.time()
+                    count = 0
+                    while time.time() - start < 0.1: # Busy wait for 100ms
+                        count += 1
+                    
+                    self.send_response(200)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "worked", "iterations": count}).encode())
+                else:
+                    self.send_response(200)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    response = {
+                        "status": "success",
+                        "message": "Hello from K3s!",
+                        "pod_name": os.getenv("HOSTNAME"),
+                        "node_name": os.getenv("NODE_NAME")
+                    }
+                    self.wfile.write(json.dumps(response).encode())
+
+        print("Starting server on port 8080...")
+        http.server.HTTPServer(("0.0.0.0", 8080), MyHandler).serve_forever()
+        '
+      register: cm_create
+      failed_when: cm_create.rc != 0 and 'already exists' not in cm_create.stderr
+
+    - name: Deploy Sample App
+      shell: |
+        kubectl apply -n sample-app -f - <<EOF
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: sample-api
+        spec:
+          replicas: 3
+          selector:
+            matchLabels:
+              app: sample-api
+          template:
+            metadata:
+              labels:
+                app: sample-api
+            spec:
+              containers:
+              - name: python
+                image: python:3.9-slim
+                command: ["python", "/app/main.py"]
+                ports:
+                - containerPort: 8080
+                env:
+                - name: NODE_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
+                volumeMounts:
+                - name: code
+                  mountPath: /app
+              volumes:
+              - name: code
+                configMap:
+                  name: api-code
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: sample-api-service
+        spec:
+          type: LoadBalancer
+          selector:
+            app: sample-api
+          ports:
+          - port: 80
+            targetPort: 8080
+        EOF
+
+    - name: Get Sample App LoadBalancer IP
+      shell: kubectl -n sample-app get svc sample-api-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      register: app_ip
+      until: app_ip.stdout != ""
+      retries: 20
+      delay: 10
+
+    - name: Display Sample App Access Info
+      debug:
+        msg: "Sample API is live at: http://{{ app_ip.stdout }}"
