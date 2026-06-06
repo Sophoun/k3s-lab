@@ -15,7 +15,7 @@ brew install ansible
 
 ## 1. Create VMs
 
-Launch 5 VMs (3 masters, 2 agents) using Multipass:
+Launch 3 VMs (1 masters, 2 agents) using Multipass:
 
 ```sh
 sh multipass/launch-vms.sh
