@@ -37,6 +37,34 @@ Run the Ansible playbook to install K3s in HA mode:
 ansible-playbook -i ansible/hosts.ini ansible/install_k3s.yml 
 ```
 
+### Local kubectl Management
+
+To manage the cluster from your host machine:
+
+1. **Prepare the config on a master node** (e.g., `vm-1`):
+
+    ```sh
+    ssh ubuntu@192.168.252.26 "sudo cp /etc/rancher/k3s/k3s.yaml /tmp/k3s.yaml && sudo chmod 644 /tmp/k3s.yaml"
+    ```
+
+2. **Download the config to your local machine**:
+
+    ```sh
+    scp ubuntu@192.168.252.26:/tmp/k3s.yaml ./k3s.yaml
+    ssh ubuntu@192.168.252.26 "sudo rm /tmp/k3s.yaml"
+    ```
+
+3. **Update the Server Address**:
+    Edit `k3s.yaml` and replace `server: https://127.0.0.1:6443` with `server: https://192.168.252.26:6443`.
+    *(Or use sed on macOS: `sed -i '' 's/127.0.0.1/192.168.252.26/g' k3s.yaml`)*
+
+4. **Set KUBECONFIG**:
+
+    ```sh
+    export KUBECONFIG=$(pwd)/k3s.yaml
+    kubectl get nodes
+    ```
+
 ## 4. Configure Firewalls (UFW)
 
 Secure the cluster nodes by opening only the required ports:
@@ -80,41 +108,13 @@ ansible-playbook -i ansible/hosts.ini ansible/install_argocd.yml
 
 - **URL**: [https://192.168.252.101](https://192.168.252.101)
 - **Username**: `admin`
-- **Password**: `hO7yjZ8IwwtJbblo`
+- **Password**: `HLHHhZIfWenv5j3s`
 *(Note: Proceed past the SSL certificate warning in your browser)*
 
 ### Longhorn UI
 
 - **URL**: [http://192.168.252.102](http://192.168.252.102)
 - **Status**: No password required by default.
-
-### Local kubectl Management
-
-To manage the cluster from your host machine:
-
-1. **Prepare the config on a master node** (e.g., `vm-1`):
-
-    ```sh
-    ssh ubuntu@192.168.252.26 "sudo cp /etc/rancher/k3s/k3s.yaml /tmp/k3s.yaml && sudo chmod 644 /tmp/k3s.yaml"
-    ```
-
-2. **Download the config to your local machine**:
-
-    ```sh
-    scp ubuntu@192.168.252.26:/tmp/k3s.yaml ./k3s.yaml
-    ssh ubuntu@192.168.252.26 "rm /tmp/k3s.yaml"
-    ```
-
-3. **Update the Server Address**:
-    Edit `k3s.yaml` and replace `server: https://127.0.0.1:6443` with `server: https://192.168.252.26:6443`.
-    *(Or use sed on macOS: `sed -i '' 's/127.0.0.1/192.168.252.26/g' k3s.yaml`)*
-
-4. **Set KUBECONFIG**:
-
-    ```sh
-    export KUBECONFIG=$(pwd)/k3s.yaml
-    kubectl get nodes
-    ```
 
 ## Project Structure
 

@@ -27,7 +27,7 @@
         dest: /tmp/longhorn.yaml
 
     - name: Apply Longhorn manifest
-      shell: k3s kubectl apply -f /tmp/longhorn.yaml
+      shell: kubectl apply -f /tmp/longhorn.yaml
 
     - name: Wait for Longhorn manager to be ready
-      shell: k3s kubectl wait --namespace longhorn-system --for=condition=ready pod --selector=app=longhorn-manager --timeout=300s
+      shell: kubectl wait --namespace longhorn-system --for=condition=ready pod --selector=app=longhorn-manager --timeout=300s

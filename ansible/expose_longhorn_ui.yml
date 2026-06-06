@@ -5,10 +5,10 @@
   tasks:
     - name: Patch Longhorn frontend service to use LoadBalancer
       shell: |
-        k3s kubectl patch svc longhorn-frontend -n longhorn-system -p '{"spec": {"type": "LoadBalancer"}}'
+        kubectl patch svc longhorn-frontend -n longhorn-system -p '{"spec": {"type": "LoadBalancer"}}'
 
     - name: Get Longhorn LoadBalancer IP
-      shell: k3s kubectl -n longhorn-system get svc longhorn-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      shell: kubectl -n longhorn-system get svc longhorn-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
       register: longhorn_ip
       until: longhorn_ip.stdout != ""
       retries: 20

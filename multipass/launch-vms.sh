@@ -9,16 +9,16 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Get host ssh public key
 SSH_KEY="$(cat ~/.ssh/id_ed25519.pub)"
 
-# Clean up existing VMs
-multipass purge
-multipass list
-
 # Start create 3 VMs
 for i in {1..3}; do
     # Set static IP (aligning with ansible/hosts.ini)
-    VM_IP="192.168.252.$((25 + i))"
+    # VM_IP="192.168.252.$((25 + i))"
     echo "----------------------------------------"
-    echo "Setting up vm-$i with IP $VM_IP..."
+    # echo "Setting up vm-$i with IP $VM_IP..."
+
+    # Clean up VM
+    multipass stop vm-$i
+    multipass delete --purge vm-$i
     
     # Create a temporary cloud-init file
     TEMP_CI=$(mktemp "$SCRIPT_DIR/cloud-init-vm-$i-XXXXXX.yaml")
@@ -28,13 +28,13 @@ for i in {1..3}; do
     echo "Launching vm-$i..."
     multipass launch --name "vm-$i" \
         --cpus 2 --memory 4G --disk 20G \
-        --network name=en0,mode=manual \
+        # --network name=en0,mode=manual \
         --cloud-init "$TEMP_CI"
     
     # Cleanup temp file
     rm "$TEMP_CI"
     # Change IP
-    multipass exec vm-$i -- sudo bash -s $VM_IP < change-ip.sh
+    # multipass exec vm-$i -- sudo bash -s $VM_IP < change-ip.sh
 done
 
 echo "----------------------------------------"

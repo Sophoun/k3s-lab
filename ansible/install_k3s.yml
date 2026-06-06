@@ -31,15 +31,14 @@
       when: inventory_hostname != "vm-1"
       args:
         creates: /etc/rancher/k3s/k3s.yaml
-
-- name: Install K3s on Agents
-  hosts: node
-  become: true
-  vars:
-    node_token: "{{ hostvars['vm-1']['node_token'] }}"
-  tasks:
-    - name: Install K3s on agents
-      shell: |
-        curl -sfL https://get.k3s.io | K3S_URL=https://{{ hostvars['vm-1']['ansible_host'] }}:6443 K3S_TOKEN="{{ node_token }}" sh -s -
-      args:
-        creates: /etc/rancher/k3s/k3s.yaml
+# - name: Install K3s on Agents
+#   hosts: node
+#   become: true
+#   vars:
+#     node_token: "{{ hostvars['vm-1']['node_token'] }}"
+#   tasks:
+#     - name: Install K3s on agents
+#       shell: |
+#         curl -sfL https://get.k3s.io | K3S_URL=https://{{ hostvars['vm-1']['ansible_host'] }}:6443 K3S_TOKEN="{{ node_token }}" sh -s -
+#       args:
+#         creates: /etc/rancher/k3s/k3s.yaml
