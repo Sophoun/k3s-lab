@@ -28,16 +28,40 @@
       shell: |
         kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
 
-    - name: Get ArgoCD admin password
-      shell: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-      register: argocd_password
-
     - name: Get ArgoCD LoadBalancer IP
       shell: kubectl -n argocd get svc argocd-server -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
       register: argocd_ip
       until: argocd_ip.stdout != ""
       retries: 20
       delay: 10
+
+    - name: Create Certificate for ArgoCD using cert-manager
+      shell: |
+        kubectl apply -f - <<EOF
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: argocd-server-tls
+          namespace: argocd
+        spec:
+          secretName: argocd-server-tls
+          issuerRef:
+            name: selfsigned-cluster-issuer
+            kind: ClusterIssuer
+          commonName: "{{ argocd_ip.stdout }}"
+          ipAddresses:
+          - "{{ argocd_ip.stdout }}"
+        EOF
+
+    - name: Restart ArgoCD Server to pick up new certificate
+      shell: kubectl rollout restart deployment argocd-server -n argocd
+
+    - name: Wait for ArgoCD server to be ready after restart
+      shell: kubectl wait --namespace argocd --for=condition=ready pod --selector=app.kubernetes.io/name=argocd-server --timeout=300s
+
+    - name: Get ArgoCD admin password
+      shell: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+      register: argocd_password
 
     - name: Display ArgoCD Access Info
       debug:

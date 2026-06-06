@@ -1,0 +1,35 @@
+---
+- name: Install Cert-Manager
+  hosts: vm-1
+  become: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  tasks:
+    - name: Add Jetstack Helm repo
+      shell: helm repo add jetstack https://charts.jetstack.io && helm repo update
+
+    - name: Create cert-manager namespace
+      shell: kubectl create namespace cert-manager
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+
+    - name: Install cert-manager
+      shell: |
+        helm upgrade --install cert-manager jetstack/cert-manager \
+          --namespace cert-manager \
+          --set installCRDs=true \
+          --timeout 10m
+
+    - name: Wait for cert-manager to be ready
+      shell: kubectl wait --namespace cert-manager --for=condition=ready pod --selector=app.kubernetes.io/instance=cert-manager --timeout=300s
+
+    - name: Create Self-Signed ClusterIssuer
+      shell: |
+        kubectl apply -f - <<EOF
+        apiVersion: cert-manager.io/v1
+        kind: ClusterIssuer
+        metadata:
+          name: selfsigned-cluster-issuer
+        spec:
+          selfSigned: {}
+        EOF

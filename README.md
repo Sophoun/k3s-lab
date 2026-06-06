@@ -16,6 +16,7 @@ The lab provisions a 3-node cluster (scalable to 5+) where nodes take on mixed r
 - **Virtualization:** Multipass (Ubuntu)
 - **Networking:** MetalLB (LoadBalancer)
 - **Storage:** Longhorn (Distributed Block Storage)
+- **Security:** cert-manager (Automated SSL)
 - **GitOps:** ArgoCD
 - **Observability:** Prometheus & Grafana stack
 
@@ -55,6 +56,7 @@ ansible-playbook -i ansible/hosts.ini ansible/install_longhorn.yml
 ansible-playbook -i ansible/hosts.ini ansible/expose_longhorn_ui.yml
 
 # GitOps & Monitoring
+ansible-playbook -i ansible/hosts.ini ansible/install_cert_manager.yml
 ansible-playbook -i ansible/hosts.ini ansible/install_argocd.yml
 ansible-playbook -i ansible/hosts.ini ansible/install_monitoring.yml
 ```
@@ -80,8 +82,8 @@ To manage the cluster from your host machine:
 
 | Service | URL | Credentials |
 | :--- | :--- | :--- |
-| **ArgoCD** | [https://192.168.252.101](https://192.168.252.101) | `admin` / `HLHHhZIfWenv5j3s` |
-| **Longhorn** | [http://192.168.252.102](http://192.168.252.102) | *No Password* |
+| **ArgoCD** | [https://192.168.252.102](https://192.168.252.102) | `admin` / `HLHHhZIfWenv5j3s` |
+| **Longhorn** | [http://192.168.252.101](http://192.168.252.101) | *No Password* |
 | **Grafana** | [http://192.168.252.103](http://192.168.252.103) | `admin` / `nBNKJI4c8umwUennBGfl6rPb9c7zVigkrHJYvc0Y` |
 
 ---
