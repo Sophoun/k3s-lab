@@ -27,8 +27,14 @@
           --set alertmanager.enabled=false \
           --set prometheus.prometheusSpec.resources.requests.memory=400Mi \
           --set prometheus.prometheusSpec.resources.limits.memory=800Mi \
-          --set grafana.resources.requests.memory=100Mi \
-          --set grafana.resources.limits.memory=300Mi \
+          --set grafana.resources.requests.memory=200Mi \
+          --set grafana.resources.limits.memory=1Gi \
+          --set grafana.resources.requests.cpu=200m \
+          --set grafana.resources.limits.cpu=1000m \
+          --set grafana.readinessProbe.initialDelaySeconds=30 \
+          --set grafana.readinessProbe.timeoutSeconds=10 \
+          --set grafana.livenessProbe.initialDelaySeconds=60 \
+          --set grafana.livenessProbe.timeoutSeconds=10 \
           --timeout 15m
       
     - name: Wait for Grafana to be ready

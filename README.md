@@ -1,129 +1,100 @@
-# K3s HA Cluster Lab
+# 🚀 K3s HA Cluster Lab
 
-This project automates the creation of a 5-node K3s High Availability cluster using Multipass for VMs and Ansible for orchestration.
+[![K3s](https://img.shields.io/badge/K3s-v1.28%2B-orange?logo=k3s)](https://k3s.io/)
+[![Ansible](https://img.shields.io/badge/Ansible-v2.15%2B-red?logo=ansible)](https://www.ansible.com/)
+[![Multipass](https://img.shields.io/badge/Multipass-v1.12-blue?logo=ubuntu)](https://multipass.run/)
 
-## Prerequisites
+Automated deployment of a High Availability K3s cluster using **Multipass** for virtualization and **Ansible** for orchestration. This lab environment provides a complete cloud-native stack including distributed storage, load balancing, GitOps, and full-stack monitoring.
 
-- [Multipass](https://multipass.run/)
-- [Ansible](https://www.ansible.com/)
+---
 
-### Install Ansible (macOS)
+## 🏗️ Architecture Overview
 
-```sh
-brew install ansible
-```
+The lab provisions a 3-node cluster (scalable to 5+) where nodes take on mixed roles to ensure high availability with minimal resource footprint.
 
-## 1. Create VMs
+- **Orchestration:** Ansible
+- **Virtualization:** Multipass (Ubuntu)
+- **Networking:** MetalLB (LoadBalancer)
+- **Storage:** Longhorn (Distributed Block Storage)
+- **GitOps:** ArgoCD
+- **Observability:** Prometheus & Grafana stack
 
-Launch 3 VMs (1 masters, 2 agents) using Multipass:
+---
 
-```sh
+## 🛠️ Prerequisites
+
+- **Multipass:** `brew install --cask multipass`
+- **Ansible:** `brew install ansible`
+- **Kubectl:** `brew install kubectl`
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Provision Infrastructure
+Launch the virtual machines:
+```bash
 sh multipass/launch-vms.sh
 ```
 
-## 2. Verify Connectivity
-
-Check if Ansible can communicate with all VMs:
-
-```sh
-ansible all -i ansible/hosts.ini -m ping
+### 2. Deploy K3s Cluster
+Install the HA cluster components:
+```bash
+ansible-playbook -i ansible/hosts.ini ansible/install_k3s.yml
 ```
 
-## 3. Install K3s Cluster
-
-Run the Ansible playbook to install K3s in HA mode:
-
-```sh
-ansible-playbook -i ansible/hosts.ini ansible/install_k3s.yml 
-```
-
-### Local kubectl Management
-
-To manage the cluster from your host machine:
-
-1. **Prepare the config on a master node** (e.g., `vm-1`):
-
-    ```sh
-    ssh ubuntu@192.168.252.26 "sudo cp /etc/rancher/k3s/k3s.yaml /tmp/k3s.yaml && sudo chmod 644 /tmp/k3s.yaml"
-    ```
-
-2. **Download the config to your local machine**:
-
-    ```sh
-    scp ubuntu@192.168.252.26:/tmp/k3s.yaml ./k3s.yaml
-    ssh ubuntu@192.168.252.26 "sudo rm /tmp/k3s.yaml"
-    ```
-
-3. **Update the Server Address**:
-    Edit `k3s.yaml` and replace `server: https://127.0.0.1:6443` with `server: https://192.168.252.26:6443`.
-    *(Or use sed on macOS: `sed -i '' 's/127.0.0.1/192.168.252.26/g' k3s.yaml`)*
-
-4. **Set KUBECONFIG**:
-
-    ```sh
-    export KUBECONFIG=$(pwd)/k3s.yaml
-    kubectl get nodes
-    ```
-
-## 4. Configure Firewalls (UFW)
-
-Secure the cluster nodes by opening only the required ports:
-
-```sh
+### 3. Secure & Optimize
+Configure firewalls and install core infrastructure:
+```bash
+# Security
 ansible-playbook -i ansible/hosts.ini ansible/configure_firewall.yml
-```
 
-## 5. Install Infrastructure Components
-
-### LoadBalancer (MetalLB)
-
-Provides external IP addresses for your services:
-
-```sh
+# Load Balancing & Storage
 ansible-playbook -i ansible/hosts.ini ansible/install_metallb.yml
-```
-
-### Distributed Storage (Longhorn)
-
-Provides replicated, high-availability storage across nodes:
-
-```sh
 ansible-playbook -i ansible/hosts.ini ansible/install_longhorn.yml
 ansible-playbook -i ansible/hosts.ini ansible/expose_longhorn_ui.yml
-```
 
-### GitOps (ArgoCD)
-
-Automated application deployment:
-
-```sh
+# GitOps & Monitoring
 ansible-playbook -i ansible/hosts.ini ansible/install_argocd.yml
+ansible-playbook -i ansible/hosts.ini ansible/install_monitoring.yml
 ```
 
 ---
 
-## 6. Accessing Services
+## 🔐 Accessing the Cluster
 
-### ArgoCD UI
+### Local Kubectl Setup
+To manage the cluster from your host machine:
 
-- **URL**: [https://192.168.252.101](https://192.168.252.101)
-- **Username**: `admin`
-- **Password**: `HLHHhZIfWenv5j3s`
-*(Note: Proceed past the SSL certificate warning in your browser)*
+1. **Fetch Config:**
+   ```bash
+   ssh ubuntu@192.168.252.107 "sudo cat /etc/rancher/k3s/k3s.yaml" > k3s.yaml
+   ```
+2. **Configure Port:**
+   ```bash
+   sed -i '' 's/127.0.0.1/192.168.252.107/g' k3s.yaml
+   export KUBECONFIG=$(pwd)/k3s.yaml
+   ```
 
-### Longhorn UI
+### Service Directory
 
-- **URL**: [http://192.168.252.102](http://192.168.252.102)
-- **Status**: No password required by default.
+| Service | URL | Credentials |
+| :--- | :--- | :--- |
+| **ArgoCD** | [https://192.168.252.101](https://192.168.252.101) | `admin` / `HLHHhZIfWenv5j3s` |
+| **Longhorn** | [http://192.168.252.102](http://192.168.252.102) | *No Password* |
+| **Grafana** | [http://192.168.252.103](http://192.168.252.103) | `admin` / `nBNKJI4c8umwUennBGfl6rPb9c7zVigkrHJYvc0Y` |
 
-## Project Structure
+---
 
-- `multipass/`: Scripts and cloud-init for VM provisioning.
-- `ansible/`:
-  - `hosts.ini`: Inventory grouped by master and node roles.
-  - `install_k3s.yml`: Playbook for HA installation.
-  - `configure_firewall.yml`: UFW security configuration.
-  - `install_metallb.yml`: LoadBalancer setup.
-  - `install_longhorn.yml`: HA storage setup.
-  - `expose_longhorn_ui.yml`: Expose Longhorn UI via LoadBalancer.
-  - `install_argocd.yml`: GitOps setup.
+## 📂 Project Structure
+
+```text
+├── ansible/
+│   ├── hosts.ini                # Inventory & variables
+│   ├── install_k3s.yml          # Core cluster setup
+│   ├── install_monitoring.yml   # Prometheus/Grafana stack
+│   └── ...                      # Infrastructure playbooks
+└── multipass/
+    ├── launch-vms.sh            # VM provisioning script
+    └── cloud-init.yaml          # Node initialization config
+```
