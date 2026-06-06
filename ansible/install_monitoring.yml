@@ -1,0 +1,53 @@
+---
+- name: Install Helm and Monitoring Stack
+  hosts: vm-1
+  become: true
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  tasks:
+    - name: Install Helm
+      shell: |
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      args:
+        creates: /usr/local/bin/helm
+
+    - name: Add Prometheus community Helm repo
+      shell: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts && helm repo update
+
+    - name: Create monitoring namespace
+      shell: kubectl create namespace monitoring
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+
+    - name: Install Kube-Prometheus-Stack (Lighter configuration)
+      shell: |
+        helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
+          --namespace monitoring \
+          --set grafana.service.type=LoadBalancer \
+          --set alertmanager.enabled=false \
+          --set prometheus.prometheusSpec.resources.requests.memory=400Mi \
+          --set prometheus.prometheusSpec.resources.limits.memory=800Mi \
+          --set grafana.resources.requests.memory=100Mi \
+          --set grafana.resources.limits.memory=300Mi \
+          --timeout 15m
+      
+    - name: Wait for Grafana to be ready
+      shell: kubectl wait --namespace monitoring --for=condition=ready pod --selector=app.kubernetes.io/name=grafana --timeout=600s
+
+    - name: Get Grafana admin password
+      shell: kubectl get secret --namespace monitoring prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 --decode
+      register: grafana_password
+
+    - name: Get Grafana LoadBalancer IP
+      shell: kubectl -n monitoring get svc prometheus-grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      register: grafana_ip
+      until: grafana_ip.stdout != ""
+      retries: 30
+      delay: 10
+
+    - name: Display Grafana Access Info
+      debug:
+        msg: 
+          - "Grafana URL: http://{{ grafana_ip.stdout }}"
+          - "Username: admin"
+          - "Password: {{ grafana_password.stdout }}"
