@@ -14,9 +14,14 @@
       shell: |
         kubectl create configmap api-code -n sample-app --from-literal=main.py='
         import http.server
+        import socketserver
         import json
         import os
         import time
+
+        class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+            """Handle requests in a separate thread."""
+            daemon_threads = True
 
         class MyHandler(http.server.BaseHTTPRequestHandler):
             def do_GET(self):
@@ -30,21 +35,21 @@
                     self.send_response(200)
                     self.send_header("Content-type", "application/json")
                     self.end_headers()
-                    self.wfile.write(json.dumps({"status": "worked", "iterations": count}).encode())
+                    self.wfile.write(json.dumps({"status": "worked", "pod": os.getenv("HOSTNAME")}).encode())
                 else:
                     self.send_response(200)
                     self.send_header("Content-type", "application/json")
                     self.end_headers()
                     response = {
                         "status": "success",
-                        "message": "Hello from K3s!",
                         "pod_name": os.getenv("HOSTNAME"),
                         "node_name": os.getenv("NODE_NAME")
                     }
                     self.wfile.write(json.dumps(response).encode())
 
-        print("Starting server on port 8080...")
-        http.server.HTTPServer(("0.0.0.0", 8080), MyHandler).serve_forever()
+        print("Starting MULTI-THREADED server on port 8080...")
+        server = ThreadedHTTPServer(("0.0.0.0", 8080), MyHandler)
+        server.serve_forever()
         '
       register: cm_create
       failed_when: cm_create.rc != 0 and 'already exists' not in cm_create.stderr

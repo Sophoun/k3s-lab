@@ -1,0 +1,27 @@
+grafana:
+  service:
+    type: LoadBalancer
+  resources:
+    requests:
+      memory: 200Mi
+      cpu: 200m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+  readinessProbe:
+    initialDelaySeconds: 30
+    timeoutSeconds: 10
+  livenessProbe:
+    initialDelaySeconds: 60
+    timeoutSeconds: 10
+
+prometheus:
+  prometheusSpec:
+    resources:
+      requests:
+        memory: 400Mi
+      limits:
+        memory: 800Mi
+
+alertmanager:
+  enabled: false
